@@ -1,10 +1,12 @@
 Changes
-Makefile.PL
-MANIFEST
 lib/Rose/Conf.pm
 lib/Rose/Conf/FileBased.pm
 lib/Rose/Conf/Root.pm
-t/conf.t
+Makefile.PL
+MANIFEST
+META.yml
 t/conf-filebased.t
 t/conf-root.t
-META.yml                                 Module meta-data (added by MakeMaker)
+t/conf.t
+t/local.conf
+t/My-Class-Conf.conf
