@@ -1,0 +1,10 @@
+Changes
+Makefile.PL
+MANIFEST
+lib/Rose/Conf.pm
+lib/Rose/Conf/FileBased.pm
+lib/Rose/Conf/Root.pm
+t/conf.t
+t/conf-filebased.t
+t/conf-root.t
+META.yml                                 Module meta-data (added by MakeMaker)
