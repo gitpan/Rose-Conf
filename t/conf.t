@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 16;
+use Test::More tests => 21;
 
 BEGIN
 {
@@ -39,8 +39,18 @@ is($hash->{'COLOR'}, 'red', 'conf_hash() get 1');
 is($hash->{'SIZE'}, 'small', 'conf_hash() get 2');
 
 eval { MyConf->param('foo') };
+ok($@, 'Nonexistent param 1');
 
-ok($@, 'Nonexistent param');
+eval { MyConf->param('HASH')->param('x') };
+ok($@, 'Nonexistent param 2');
+
+is(MyConf->param('HASH')->param('b')->param('c'), 4, 'get nested param() 1');
+
+$CONF{'HASH'}{'b'}{'c'} = 7;
+is(MyConf->param('HASH')->param('b')->param('c'), 7, 'set nested param() 1');
+
+ok(MyConf->param('HASH')->param_exists('b'), 'nested param_exists() 1');
+ok(!MyConf->param('HASH')->param_exists('x'), 'nested param_exists() 2');
 
 BEGIN
 {
@@ -53,5 +63,14 @@ BEGIN
   (
     COLOR => 'blue',
     SIZE  => 'big',
+    
+    HASH =>
+    {
+      a => 3,
+      b =>
+      {
+        c => 4,
+      }
+    }
   );
 }

@@ -4,7 +4,7 @@ use strict;
 
 use Carp();
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our $ExportLevel = 0;
 
@@ -78,6 +78,11 @@ sub param
       Carp::croak "No such conf parameter in $class: '$param'\n"
         unless(exists $conf->{$param});
 
+      if(ref $conf->{$param} eq 'HASH')
+      {
+        return bless $conf->{$param}, 'Rose::Conf::Setting';
+      }
+
       return $conf->{$param};
     }
   }
@@ -106,6 +111,14 @@ sub param_exists
   return exists $conf->{$param};
 }
 
+BEGIN
+{
+  package Rose::Conf::Setting;
+  our @ISA = qw(Rose::Conf);
+  sub conf_hash { $_[0] }
+}
+
+
 1;
 
 __END__
@@ -127,6 +140,11 @@ Rose::Conf - Configuration module base class.
     (
       COLOR => 'blue',
       SIZE  => 'big',
+      PORTS =>
+      {
+        ssh => 22,
+        ftp => 21,
+      },
       ...
     );
 
@@ -139,6 +157,8 @@ Rose::Conf - Configuration module base class.
     ...
     $color = $SYS_CONF{'COLOR'}; # get
     $SYS_CONF{'COLOR'} = 'red';  # set
+    $port = $SYS_CONF{'PORTS'}{'ssh'}; # get nested
+    $SYS_CONF{'PORTS'}{'ssh'} = 2200;  # set nested
 
     or
 
@@ -147,6 +167,9 @@ Rose::Conf - Configuration module base class.
     ...
     $color = My::System::Conf->param('COLOR'); # get
     My::System::Conf->param(COLOR => 'red');   # set
+    # get/set nested values
+    $port = My::System::Conf->param('PORTS')->param{'ssh'};
+    My::System::Conf->param('PORTS')->param{'ssh' => 2200};
 
     or
 
@@ -156,6 +179,8 @@ Rose::Conf - Configuration module base class.
     $conf  = My::System::Conf->conf_hash;
     $color = $conf->{'COLOR'}; # get
     $conf->{'COLOR'} = 'red';  # set
+    $port = $conf->{'PORTS'}{'ssh'}; # get nested
+    $conf->{'PORTS'}{'ssh'} = 2200;  # set nested
 
 =head1 DESCRIPTION
 
@@ -188,6 +213,11 @@ package global C<%CONF> hash.  Example:
       NAME => 'MySite',
       HOST => 'mysite.com',
       IP   => '123.123.123.123',
+      PORTS =>
+      {
+        main => 80,
+        ssl  => 443,
+      },
       ...
     );
 
@@ -208,6 +238,8 @@ provide the name of the hash that will be used to access it.  Examples:
 
     $site_name = $SITE_CONF{'NAME'}; # get
     $REMOTE_CONF{'NAME'} = 'Remote'; # set
+    $port = $SITE_CONF{'PORTS'}{'main'}; # get nested
+    $SITE_CONF{'PORTS'}{'main'} = 8000;  # set nested
 
 =head2 USING THE param() CLASS METHOD
 
@@ -220,6 +252,13 @@ value, and two arguments to set a value.  Example:
     $name = Site::Conf->param('NAME');      # get
     Site::Conf->param(NAME => 'MyNewSite'); # set
 
+Calls to the C<param()> method can be chained in order to access configuration
+values in nested hashes.  Example:
+
+    # get/set nested values
+    $port = Site::Conf->param('PORTS')->param('ssh');
+    Site::Conf->param('PORTS')->param('ssh' => 2200);
+
 =head2 USING THE conf_hash() CLASS METHOD
 
 To use the C<conf_hash()> class method, C<use> the configuration module
@@ -230,8 +269,10 @@ to the configuration hash.  Example:
     ...
     $conf = Site::Conf->conf_hash;
 
-    $name = $conf->{'NAME'};       # get
-    $conf->{'NAME'} = 'MyNewSite'; # set
+    $name = $conf->{'NAME'};         # get
+    $conf->{'NAME'} = 'MyNewSite';   # set
+    $port = $conf->{'PORTS'}{'ssl'}; # get nested
+    $conf->{'PORTS'}{'ssl'} = 4430;  # set nested
 
 =head2 WHICH METHOD SHOULD I USE?
 
@@ -249,8 +290,8 @@ The convention for naming a configuration class is to take the name of the
 module being configured and add "::Conf" to the end.  So the configuration
 module for C<My::Class> would be C<My::Class::Conf>.
 
-By convention, configuration parameter names should use uppercase letters.
-(e.g., "COLOR" or "SIZE", not "color" or "Size")
+By convention, top-level configuration parameter names should use uppercase
+letters. (e.g., "COLOR" or "SIZE", not "color" or "Size")
 
 =head1 CLASS METHODS
 
@@ -269,9 +310,27 @@ If an optional VALUE argument is passed, the configuration parameter specified
 by NAME is set to VALUE.  The parameter is created if it does not already
 exist.  The new value is returned.
 
+Calls to C<param()> can be chained in order to access configuration values in
+nested hashes.  Example:
+
+    # get/set nested values
+    $port = Site::Conf->param('PORTS')->param('ssh');
+    Site::Conf->param('PORTS')->param('ssh' => 2200);
+
+If VALUE is a reference to a hash, it is blessed into an undocumented class
+that you should not be concerned with.  It is safe to simply treat the
+now-blessed reference as a regular hash reference, just be aware that calling
+C<ref()> on it will not return "HASH".
+
 =item B<param_exists NAME>
 
 Returns true if a configuration parameter named NAME exists, false otherwise.
+
+Calls to C<param_exists()> can be placed at the end of a chain of calls to
+C<param()> in order to check for the existence of configuration values in
+nested hashes.  Example:
+
+    Site::Conf->param('PORTS')->param_exists('ssh');
 
 =back
 
